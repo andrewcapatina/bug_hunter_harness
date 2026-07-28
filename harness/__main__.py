@@ -85,11 +85,17 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--run-id", default=None)
+    ap.add_argument("--diff-ref", default=None,
+                    help="explicit git range (e.g. HEAD~3..HEAD) instead of the time window")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="print findings JSON; write no sidecar/marker/ledger (parity gate)")
     ap.add_argument("--fix", action="store_true",
                     help="also run the guard-railed fixer on auto_applicable findings")
     a = ap.parse_args()
 
     config = json.loads(Path(a.config).read_text())
+    if a.diff_ref:
+        config.setdefault("gather", {})["diff_ref"] = a.diff_ref
     repo = config["repo_root"]
     run, read, list_files, write, append = _adapters(repo)
     profile = ModelProfile.from_config(config["model_profile"])
@@ -100,6 +106,18 @@ def main() -> int:
     result = run_bug_hunter(config, profile, run=run, read=read,
                             list_files=list_files, today=now.date().isoformat(),
                             run_id=run_id)
+
+    if a.dry_run:
+        print(json.dumps({
+            "status": result.status, "reason": result.reason,
+            "n_units": result.n_units, "n_batches": result.n_batches,
+            "n_batch_failures": result.n_batch_failures,
+            "suppressed": result.suppressed, "diff_truncated": result.diff_truncated,
+            "refuted": result.refuted,
+            "findings": result.findings_as_dicts(),
+        }, indent=2))
+        return 0
+
     write_result(result, config, run_id, now.isoformat(), write=write)
 
     if a.fix and result.findings:

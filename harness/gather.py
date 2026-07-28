@@ -41,13 +41,17 @@ def git_log(run, since_hours) -> str:
                        "--date=short", "--pretty=format:%h %ad %s"])
 
 
-def git_diff(run, since_hours, max_chars) -> tuple[str, bool]:
+def git_diff(run, since_hours, max_chars, diff_ref=None) -> tuple[str, bool]:
     """Diff over the last `since_hours`; fall back to HEAD~5 when the reflog
-    window is empty/absent (fresh clone). Capped at max_chars as a safety limit
-    only — batching covers the whole diff, this just guards a runaway."""
-    diff = _safe(run, ["git", "diff", f"HEAD@{{{since_hours} hours ago}}..HEAD"])
-    if not diff.strip():
-        diff = _safe(run, ["git", "diff", "HEAD~5..HEAD"])
+    window is empty/absent (fresh clone). An explicit `diff_ref` (e.g.
+    "HEAD~3..HEAD") overrides the window — used for parity gates / manual runs.
+    Capped at max_chars as a safety limit only — batching covers the whole diff."""
+    if diff_ref:
+        diff = _safe(run, ["git", "diff", diff_ref])
+    else:
+        diff = _safe(run, ["git", "diff", f"HEAD@{{{since_hours} hours ago}}..HEAD"])
+        if not diff.strip():
+            diff = _safe(run, ["git", "diff", "HEAD~5..HEAD"])
     truncated = len(diff) > max_chars
     return (diff[:max_chars] if truncated else diff), truncated
 
@@ -111,7 +115,7 @@ def read_first_seen(read, path) -> dict:
 def gather(config: dict, *, run, read, list_files, run_id=None) -> GatherResult:
     g = config.get("gather", {}) or {}
     diff, trunc = git_diff(run, g.get("since_hours", 24),
-                           g.get("diff_max_chars", 200_000))
+                           g.get("diff_max_chars", 200_000), g.get("diff_ref"))
     return GatherResult(
         git_log=git_log(run, g.get("since_hours", 24)),
         diff=diff, diff_truncated=trunc,

@@ -35,6 +35,15 @@ class GitDiffTests(unittest.TestCase):
         diff, _ = git_diff(run, 24, 5_000)
         self.assertEqual(diff, "")
 
+    def test_explicit_diff_ref_overrides_window(self):
+        seen = {}
+        def run(args):
+            seen["args"] = args
+            return "DIFF_REF"
+        diff, _ = git_diff(run, 24, 10_000, diff_ref="HEAD~3..HEAD")
+        self.assertEqual(diff, "DIFF_REF")
+        self.assertIn("HEAD~3..HEAD", seen["args"])   # used the ref, not the window
+
 
 class SidecarTests(unittest.TestCase):
     def _read(self, files):
