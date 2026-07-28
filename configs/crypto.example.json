@@ -4,7 +4,7 @@
   "model_profile": {
     "endpoint": "http://YOUR_LLM_HOST:8001/v1",
     "model": "auto",
-    "context_window_tokens": 64000,
+    "context_window_tokens": 1000000,
     "max_output_tokens": 16384,
     "request_timeout_s": 1800,
     "sampling": "server_default",
@@ -44,5 +44,6 @@
     "max_patch_lines": 30,
     "consecutive_failure_halt": 3,
     "ledger_path": "state/bug_fixer_ledger.ndjson"
-  }
+  },
+  "_context_note": "Set context_window_tokens to what your endpoint ACTUALLY serves (GET /v1/models -> max_model_len). Batch sizing derives from it: a large window puts every changed definition in ONE call, which enables cross-file reasoning and avoids cross-batch duplicate findings."
 }
