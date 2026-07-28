@@ -15,10 +15,18 @@ from __future__ import annotations
 import json
 
 
+def _expand(path: str, run_id: str, now_iso: str) -> str:
+    """Support {ts} / {run_id} placeholders in configured paths. Bots differ:
+    crypto overwrites a single `*_latest.json`; options' downstream fixer globs
+    timestamped `bug_hunter-<ts>.json` files. Both are just config."""
+    ts = now_iso.replace("-", "").replace(":", "").split(".")[0].replace("+0000", "")
+    return path.replace("{ts}", ts).replace("{run_id}", run_id)
+
+
 def build_artifacts(result, config: dict, run_id: str, now_iso: str) -> dict:
     sc = config.get("sidecar", {}) or {}
-    findings_path = sc["findings_path"]
-    marker_path = sc["marker_path"]
+    findings_path = _expand(sc["findings_path"], run_id, now_iso)
+    marker_path = _expand(sc["marker_path"], run_id, now_iso)
     first_seen_path = (config.get("gather", {}) or {}).get("first_seen_path")
 
     sidecar_json = {

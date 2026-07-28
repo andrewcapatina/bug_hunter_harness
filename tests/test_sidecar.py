@@ -73,5 +73,17 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(rec["run_id"], "R1")
 
 
+
+class PlaceholderTests(unittest.TestCase):
+    def test_ts_placeholder_expands_and_matches_options_glob(self):
+        import fnmatch
+        cfg = {"sidecar": {"findings_path": ".claude/runs/bug_hunter-{ts}.json",
+                           "marker_path": ".claude/agents/bug_hunter_last_run.txt"}}
+        arts = build_artifacts(_result(), cfg, "R1", "2026-07-28T05:00:00Z")
+        path = [p for p in arts if p.startswith(".claude/runs/")][0]
+        self.assertNotIn("{ts}", path)
+        # must match the glob options' bug_fixer uses to find the newest sidecar
+        self.assertTrue(fnmatch.fnmatch(path.split("/")[-1], "bug_hunter-*.json"), path)
+
 if __name__ == "__main__":
     unittest.main()
