@@ -1,0 +1,48 @@
+{
+  "bot": "example",
+  "repo_root": "/path/to/your/crypto-bot",
+  "model_profile": {
+    "endpoint": "http://YOUR_LLM_HOST:8001/v1",
+    "model": "auto",
+    "context_window_tokens": 64000,
+    "max_output_tokens": 16384,
+    "request_timeout_s": 1800,
+    "sampling": "server_default",
+    "response_format": "json_object",
+    "reasoning_model": true
+  },
+  "gather": {
+    "since_hours": 24,
+    "diff_max_chars": 200000,
+    "reviewed_sidecars": [
+      "state/*_latest.json"
+    ],
+    "bugs_md": "docs/bugs.md",
+    "first_seen_path": "state/bug_first_seen.json",
+    "resolved_lookback_days": 60
+  },
+  "identity_preamble": "You are a senior engineer reviewing changes to a trading bot. Describe YOUR bot here \u2014 the live strategies and anything retired \u2014 so the model doesn't flag intentional design as bugs.",
+  "glossary": {
+    "YOUR_TICKER_CODES": "domain codes/conventions the model would otherwise call typos or fake",
+    "your_field_name": "e.g. a units convention such as 'milliseconds, not seconds'"
+  },
+  "sidecar": {
+    "findings_path": "state/bug_hunter-{ts}.json",
+    "marker_path": "state/bug_hunter_last_run.txt"
+  },
+  "fixer": {
+    "allowed_paths": [
+      "*.py"
+    ],
+    "blocked_paths": [
+      "*_creds*.py",
+      "*/your_broker_adapter.py",
+      "*/strategy.py",
+      "*.env*",
+      "*.lock"
+    ],
+    "max_patch_lines": 30,
+    "consecutive_failure_halt": 3,
+    "ledger_path": "state/bug_fixer_ledger.ndjson"
+  }
+}

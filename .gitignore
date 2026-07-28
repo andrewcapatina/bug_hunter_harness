@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 *.tmp
 parity_*.log
+
+# Real per-bot configs contain live strategy details + internal hosts.
+# Commit only the .example.json templates.
+configs/*.json
+!configs/*.example.json

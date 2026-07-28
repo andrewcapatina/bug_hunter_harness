@@ -9,6 +9,19 @@ both the crypto-bot and options-bot. Replaces the two diverged per-bot copies.
   slivers, misattribution, dedup inflation, miscalibration) are made
   *structurally impossible*, and the model is a swappable **profile**.
 
+## Configure
+
+Real configs are **not** committed — they carry live strategy details and
+internal endpoints. Copy a template and fill it in:
+
+```bash
+cp configs/crypto.example.json configs/crypto.json   # then edit
+```
+
+`identity_preamble` and `glossary` matter: they tell the model what your bot is
+and which domain conventions are intentional, which is what stops it reporting
+real conventions as bugs.
+
 ## Run
 
 ```bash
@@ -37,7 +50,9 @@ harness/
   sidecar.py   per-bot output adapter
   run.py       orchestrator
   __main__.py  CLI
-configs/       one JSON per bot — everything bot-specific
+configs/       one JSON per bot — everything bot-specific (GITIGNORED;
+               commit only *.example.json — real configs name live
+               strategies and internal hosts)
 tests/         109 tests, zero LLM/git/filesystem coupling
 ```
 
