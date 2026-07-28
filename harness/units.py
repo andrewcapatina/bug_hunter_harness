@@ -225,16 +225,33 @@ def _fallback_units(path, source, ranges, reason: str) -> list[ReviewUnit]:
 # --------------------------------------------------------------------------- #
 # Orchestrator.
 # --------------------------------------------------------------------------- #
-def build_units(diff_text: str, read_file) -> list[ReviewUnit]:
+def build_units(diff_text: str, read_file,
+                whole_file_max_lines: int = 0) -> list[ReviewUnit]:
     """Diff + a `read_file(path)->str|None` (current NEW-state content) →
-    whole-definition review units. A file `read_file` can't return (deleted /
-    binary / unreadable) is skipped."""
+    review units. A file `read_file` can't return (deleted / binary /
+    unreadable) is skipped.
+
+    whole_file_max_lines > 0 enables WHOLE-FILE review: any changed file at or
+    under that many lines is sent in its entirety (one `<file>` unit) instead
+    of being split into enclosing definitions. With a large-context model this
+    is strictly more grounding — a "missing guard / return just outside the
+    shown definition" false positive becomes impossible because the model sees
+    the whole file. `changed_lines` still flags the edits so it stays focused.
+    Files over the cap fall back to per-definition units (the default, and what
+    keeps a giant file from dominating a batch). 0 disables the mode entirely.
+    """
     units: list[ReviewUnit] = []
     for path, ranges in parse_diff(diff_text).items():
         source = read_file(path)
         if source is None:
             continue
-        if path.endswith(".py"):
+        n_lines = len(source.splitlines())
+        if whole_file_max_lines and n_lines <= whole_file_max_lines:
+            units.append(ReviewUnit(
+                path=path, symbol="<file>", kind="file",
+                start_line=1, end_line=n_lines or 1,
+                source=source, changed_lines=_merge(ranges)))
+        elif path.endswith(".py"):
             units.extend(_python_units(path, source, ranges))
         else:
             units.extend(_fallback_units(path, source, ranges, reason="non-python"))

@@ -101,6 +101,19 @@ the single largest source of noise and it is removed.**
 
 This subsumes both bots' file-boundary splitting and upgrades hunk → whole-unit.
 
+**Whole-file mode (`units.whole_file_max_lines`, added 2026-07-28).** When the
+model profile has a large context window, per-definition expansion leaves
+grounding on the table: the model still can't see a guard, early return, or
+constant that lives *outside* the changed definition, so it flags them as
+"missing." When a changed file is at/under `whole_file_max_lines`, send it
+**whole** (one `<file>` unit) instead — with `changed_lines` still marked so
+the model focuses on the edits but reasons over the entire file. This makes the
+"missing code just outside the shown block" false positive structurally
+impossible for those files. Files over the cap fall back to per-definition
+(keeps a 4000-line file from dominating a batch). `0` disables the mode. The
+1M-context DeepSeek profile sets it to 2000; batching (§below) still enforces
+I1 against the token budget, so oversized whole files never overflow a call.
+
 ## 3. Model interface & profile (transferability)
 
 The model is described by a **profile** (a config object), and the harness

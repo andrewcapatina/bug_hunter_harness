@@ -146,5 +146,36 @@ class UnparseablePythonTests(unittest.TestCase):
         self.assertEqual(u[0].kind, "file")           # small -> whole file
 
 
+class WholeFileModeTests(unittest.TestCase):
+    """whole_file_max_lines sends a changed file WHOLE (one <file> unit)
+    instead of per-definition, when it fits the cap. MOD_SRC is 26 lines."""
+
+    def test_python_file_sent_whole_when_under_cap(self):
+        u = build_units(DIFF, _reader({"mod.py": MOD_SRC}), whole_file_max_lines=100)
+        self.assertEqual(len(u), 1)
+        self.assertEqual(u[0].kind, "file")
+        self.assertEqual(u[0].symbol, "<file>")
+        self.assertEqual(u[0].source, MOD_SRC)         # entire file, verbatim
+        self.assertEqual(u[0].start_line, 1)
+        self.assertEqual(u[0].end_line, len(MOD_LINES))
+
+    def test_changed_lines_preserved_across_all_hunks(self):
+        u = build_units(DIFF, _reader({"mod.py": MOD_SRC}), whole_file_max_lines=100)[0]
+        flat = {ln for s, e in u.changed_lines for ln in range(s, e + 1)}
+        for touched in (4, 9, 20, 24):                 # all four hunks
+            self.assertIn(touched, flat)
+
+    def test_over_cap_falls_back_to_per_definition(self):
+        u = build_units(DIFF, _reader({"mod.py": MOD_SRC}), whole_file_max_lines=10)
+        self.assertGreater(len(u), 1)                  # split into defs, not one <file>
+        self.assertNotIn("file", {x.kind for x in u})
+
+    def test_disabled_by_default_keeps_definitions(self):
+        default = build_units(DIFF, _reader({"mod.py": MOD_SRC}))
+        explicit_zero = build_units(DIFF, _reader({"mod.py": MOD_SRC}), whole_file_max_lines=0)
+        self.assertEqual([x.symbol for x in default], [x.symbol for x in explicit_zero])
+        self.assertGreater(len(default), 1)            # per-definition, unchanged
+
+
 if __name__ == "__main__":
     unittest.main()

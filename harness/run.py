@@ -47,7 +47,9 @@ def run_bug_hunter(config: dict, profile, *, run, read, list_files, today: str,
         return RunResult("PASS", "no code changes in the window", [], [],
                          g.first_seen, 0, 0, 0, g.diff_truncated, 0)
 
-    units = build_units(g.diff, read)
+    units = build_units(
+        g.diff, read,
+        whole_file_max_lines=int(config.get("units", {}).get("whole_file_max_lines", 0)))
     if not units:
         return RunResult("PASS", "no reviewable definitions changed", [], [],
                          g.first_seen, 0, 0, 0, g.diff_truncated, 0)

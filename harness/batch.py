@@ -84,8 +84,9 @@ def render_batch(units: list[ReviewUnit], batch_idx: int, n_batches: int) -> str
     files = sorted({u.path for u in units})
     header = (f"## Review batch {batch_idx} of {n_batches} "
               f"(files: {', '.join(files)})\n"
-              f"Each block below is a WHOLE definition. Lines are absolute; "
-              f"changed lines are marked with '*'. Report ONLY issues evidenced "
+              f"Each block below is a WHOLE file or a WHOLE definition. Lines "
+              f"are absolute; changed lines are marked with '*' (focus there, "
+              f"but use the full block as context). Report ONLY issues evidenced "
               f"within a block shown here — do not infer code you cannot see.")
     return header + "\n\n" + "\n\n".join(render_unit(u) for u in units)
 

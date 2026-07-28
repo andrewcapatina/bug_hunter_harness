@@ -21,6 +21,9 @@
     "first_seen_path": "state/bug_first_seen.json",
     "resolved_lookback_days": 60
   },
+  "units": {
+    "whole_file_max_lines": 2000
+  },
   "identity_preamble": "You are a senior engineer reviewing changes to a trading bot. Describe YOUR bot here \u2014 the live strategies and anything retired \u2014 so the model doesn't flag intentional design as bugs.",
   "glossary": {
     "YOUR_TICKER_CODES": "domain codes/conventions the model would otherwise call typos or fake",
