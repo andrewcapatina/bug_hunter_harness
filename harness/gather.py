@@ -15,7 +15,11 @@ import re
 from dataclasses import dataclass
 
 # Fixer/disposition outcomes that mean "don't re-emit this finding".
-RESOLVED_OUTCOMES = {"applied", "fixed", "false_positive", "duplicate"}
+# "already_resolved" is the trading-harness-bug-fixer disposition for a
+# finding whose fingerprint is already dispatched — it suppresses too
+# (cutover 2026-07-30; that harness's ledger is now fixer.ledger_path).
+RESOLVED_OUTCOMES = {"applied", "fixed", "false_positive", "duplicate",
+                     "already_resolved"}
 
 
 @dataclass
