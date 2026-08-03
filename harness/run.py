@@ -34,6 +34,9 @@ class RunResult:
     n_batch_failures: int
     diff_truncated: bool
     suppressed: int         # resolved findings dropped before dedup
+    # Real error string per failed batch. Trailing + defaulted so existing
+    # positional constructions keep working.
+    batch_errors: list = field(default_factory=list)
 
     def findings_as_dicts(self) -> list:
         return [f.to_dict() for f in self.findings]
@@ -64,9 +67,13 @@ def run_bug_hunter(config: dict, profile, *, run, read, list_files, today: str,
 
     all_findings: list[Finding] = []
     n_fail = 0
+    batch_errors: list[str] = []
     for (idx, _user, bunits), res in zip(plan, results):
         if not res.ok:
             n_fail += 1
+            # Keep the message. Dropping it is why a batch failure could only
+            # ever be reported as "model unreachable".
+            batch_errors.append(res.error or "unknown error")
             continue
         raw = (res.data or {}).get("findings", [])
         all_findings.extend(normalize_batch(
@@ -86,6 +93,7 @@ def run_bug_hunter(config: dict, profile, *, run, read, list_files, today: str,
 
     status, reason = classify_status(
         verified, n_batches=len(plan), n_batch_failures=n_fail,
+        batch_errors=batch_errors,
         gather_failed=False)
 
     # Persist first-seen for stable display_ids: new fingerprints -> today.
@@ -94,4 +102,5 @@ def run_bug_hunter(config: dict, profile, *, run, read, list_files, today: str,
         new_first_seen.setdefault(f.fingerprint, today)
 
     return RunResult(status, reason, verified, refuted, new_first_seen,
-                     len(units), len(plan), n_fail, g.diff_truncated, suppressed)
+                     len(units), len(plan), n_fail, g.diff_truncated,
+                     suppressed, batch_errors=batch_errors)

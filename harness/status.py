@@ -8,11 +8,25 @@ from __future__ import annotations
 
 
 def classify_status(findings, *, n_batches: int, n_batch_failures: int,
-                    gather_failed: bool = False) -> tuple[str, str]:
+                    gather_failed: bool = False,
+                    batch_errors: list | None = None) -> tuple[str, str]:
     if gather_failed:
         return "SOFT_HALT", "input gather failed — nothing reviewed"
     if n_batches > 0 and n_batch_failures >= n_batches:
-        return "SOFT_HALT", f"all {n_batches} batches failed (model unreachable)"
+        # Report what ACTUALLY failed. This used to hardcode "(model
+        # unreachable)" for every batch failure — a cause it never checked.
+        # On 2026-08-02 the crypto chain reported "model unreachable" while
+        # the endpoint was serving fine, which sent the diagnosis in exactly
+        # the wrong direction. BatchResult.error already carries the real
+        # message; it was being discarded.
+        detail = ""
+        if batch_errors:
+            uniq = list(dict.fromkeys(e for e in batch_errors if e))
+            if uniq:
+                detail = f" — {uniq[0][:200]}"
+                if len(uniq) > 1:
+                    detail += f" (+{len(uniq) - 1} other error(s))"
+        return "SOFT_HALT", f"all {n_batches} batches failed{detail}"
 
     n = len(findings)
     n_high = sum(1 for f in findings if f.severity == "high")
