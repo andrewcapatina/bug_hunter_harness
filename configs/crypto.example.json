@@ -4,7 +4,7 @@
  "model_profile": {
   "endpoint": "http://YOUR_LLM_HOST:8001/v1",
   "model": "auto",
-  "context_window_tokens": 1000000,
+  "context_window_tokens": 256000,
   "max_output_tokens": 16384,
   "request_timeout_s": 1800,
   "sampling": "server_default",
@@ -49,5 +49,5 @@
   "ledger_path": "state/_bug_fixer_dispositions.ndjson",
   "_comment_ledger": "2026-07-30 cutover: suppression reads trading-harness-bug-fixer's fingerprint-keyed dispositions ledger (was: state/bug_fixer_ledger.ndjson, whose keys never matched)"
  },
- "_context_note": "Set context_window_tokens to what your endpoint ACTUALLY serves (GET /v1/models -> max_model_len). Batch sizing derives from it: a large window puts every changed definition in ONE call, which enables cross-file reasoning and avoids cross-batch duplicate findings."
+ "_context_note": "Batch sizing derives from context_window_tokens: a large window puts every changed definition in ONE call, which enables cross-file reasoning and avoids cross-batch duplicate findings. But do NOT simply copy max_model_len from GET /v1/models -- that is a PER-REQUEST ceiling, not a budget the server can honour concurrently. Size it from the KV cache instead: take 'GPU KV cache size: N tokens' and 'max_num_seqs: S' from the vLLM startup log and use at most N/S. Example measured 2026-08-02: N=3,091,332 and S=6 gives 515k, so 256k was chosen (12x concurrency, 2x headroom) even though max_model_len advertised 1,000,000 -- at 1M a single request reserves a third of the whole cache and three of them starve a server built for six sequences. Endpoints are shared across bots and overnight labs; leave room for all of them."
 }
