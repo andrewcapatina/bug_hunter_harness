@@ -61,7 +61,11 @@ def main() -> int:
     # remains as the vendored seed + its tests; it is no longer invocable.
     a = ap.parse_args()
 
-    config = json.loads(Path(a.config).read_text())
+    config_path = Path(a.config).resolve()
+    config = json.loads(config_path.read_text())
+    repo_root = Path(config["repo_root"])
+    if not repo_root.is_absolute():
+        config["repo_root"] = str((config_path.parent / repo_root).resolve())
     if a.diff_ref:
         config.setdefault("gather", {})["diff_ref"] = a.diff_ref
     repo = config["repo_root"]

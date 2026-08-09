@@ -1,6 +1,6 @@
 {
  "bot": "example",
- "repo_root": "/path/to/your/crypto-bot",
+ "repo_root": "../../crypto-bot/trading_bot",
  "model_profile": {
   "endpoint": "http://YOUR_LLM_HOST:8001/v1",
   "model": "auto",

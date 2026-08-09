@@ -1,6 +1,6 @@
 {
  "bot": "example",
- "repo_root": "/path/to/your/options-bot",
+ "repo_root": "../../options-bot",
  "model_profile": {
   "endpoint": "http://YOUR_LLM_HOST:8001/v1",
   "model": "deepseek-v4-flash",
