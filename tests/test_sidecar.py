@@ -37,6 +37,7 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(d["status"], "WARN")
         self.assertEqual(d["run_id"], "R1")
         self.assertEqual(d["n_findings"], 1)
+        self.assertEqual(d["batch_errors"], [])
         self.assertEqual(d["suppressed"], 1)
         self.assertEqual(d["findings"][0]["fingerprint"], "fp1")
         self.assertEqual(len(d["refuted"]), 1)

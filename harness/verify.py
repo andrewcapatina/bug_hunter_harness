@@ -53,16 +53,17 @@ def build_refute_prompt(finding, unit) -> str:
     )
 
 
-def verify_finding(finding, unit, profile) -> tuple[bool, str]:
+def verify_finding(finding, unit, profile, *, deadline=None) -> tuple[bool, str]:
     """(upheld, reason). No matching unit → refuted (cannot evidence it). A
     failed refute CALL raises — the caller handles it fail-open."""
     if unit is None:
         return False, "no matching code unit to verify against"
-    data, _ = chat(profile, REFUTE_SYSTEM, build_refute_prompt(finding, unit))
+    data, _ = chat(profile, REFUTE_SYSTEM, build_refute_prompt(finding, unit),
+                   deadline=deadline)
     return bool(data.get("upheld", False)), str(data.get("reason", ""))
 
 
-def verify_findings(findings, units, profile):
+def verify_findings(findings, units, profile, *, deadline=None):
     """Adversarially verify each finding. Returns (kept, dropped); dropped is
     [{fingerprint, display_id, reason}] for the refuted ones. A finding kept
     despite a FAILED verify call (LLM blip) is tagged unverified — never
@@ -71,7 +72,7 @@ def verify_findings(findings, units, profile):
     for f in findings:
         unit = _find_unit(units, f)
         try:
-            upheld, reason = verify_finding(f, unit, profile)
+            upheld, reason = verify_finding(f, unit, profile, deadline=deadline)
         except Exception:  # noqa: BLE001 — fail-open: a blip must not delete a real bug
             kept.append(replace(f, found_by=f"{f.found_by} [unverified: refute-call-failed]"))
             continue

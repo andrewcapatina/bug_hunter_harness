@@ -39,6 +39,7 @@ def build_artifacts(result, config: dict, run_id: str, now_iso: str) -> dict:
         "n_units": result.n_units,
         "n_batches": result.n_batches,
         "n_batch_failures": result.n_batch_failures,
+        "batch_errors": result.batch_errors,
         "suppressed": result.suppressed,
         "diff_truncated": result.diff_truncated,
         "findings": result.findings_as_dicts(),

@@ -128,6 +128,14 @@ class ChatTests(unittest.TestCase):
             with self.assertRaises(ModelError):
                 chat(self.p, "sys", "usr", attempts=2)
 
+    def test_profile_can_bound_attempts_to_one(self):
+        p = ModelProfile(endpoint="http://x/v1", model="m", attempts=1)
+        with mock.patch.object(model, "_http_post",
+                               side_effect=TimeoutError("slow")) as post:
+            with self.assertRaises(ModelError):
+                chat(p, "sys", "usr")
+        post.assert_called_once()
+
     def test_unparseable_content_is_retried_then_raises(self):
         with mock.patch.object(model, "_http_post", return_value=_resp("not json")):
             with self.assertRaises(ModelError):
@@ -154,6 +162,15 @@ class ChatBatchTests(unittest.TestCase):
         self.assertEqual(results[1].label, "bad")
         self.assertIn("down", results[1].error)
         self.assertEqual(results[0].data, {"findings": [1]})
+
+    def test_reports_each_completed_batch_to_checkpoint_callback(self):
+        seen = []
+        with mock.patch.object(model, "_http_post",
+                               return_value=_resp('{"findings": []}')):
+            chat_batch(self.p, [("b1", "s", "u"), ("b2", "s", "u")],
+                       on_result=lambda result, done, total:
+                       seen.append((result.label, done, total)))
+        self.assertEqual(seen, [("b1", 1, 2), ("b2", 2, 2)])
 
 
 if __name__ == "__main__":

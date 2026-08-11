@@ -75,9 +75,40 @@ def main() -> int:
     now = datetime.now(timezone.utc)
     run_id = a.run_id or now.strftime("%Y%m%dT%H%M%SZ")
 
+    checkpoint_path = (config.get("sidecar", {}) or {}).get("checkpoint_path")
+    checkpoint_rows = []
+
+    def checkpoint(result, completed, total):
+        if not checkpoint_path or a.dry_run:
+            return
+        stats = result.stats
+        checkpoint_rows.append({
+            "label": result.label,
+            "ok": result.ok,
+            "error": result.error,
+            "stats": ({
+                "model": stats.model,
+                "prompt_tokens": stats.prompt_tokens,
+                "completion_tokens": stats.completion_tokens,
+                "elapsed_s": stats.elapsed_s,
+                "finish_reason": stats.finish_reason,
+                "attempt": stats.attempt,
+            } if stats else None),
+            "data": result.data,
+        })
+        write(checkpoint_path, json.dumps({
+            "agent": "bug_hunter",
+            "run_id": run_id,
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "complete": False,
+            "completed_batches": completed,
+            "total_batches": total,
+            "batches": checkpoint_rows,
+        }, indent=2) + "\n")
+
     result = run_bug_hunter(config, profile, run=run, read=read,
                             list_files=list_files, today=now.date().isoformat(),
-                            run_id=run_id)
+                            run_id=run_id, checkpoint=checkpoint)
 
     if a.dry_run:
         print(json.dumps({
@@ -92,6 +123,18 @@ def main() -> int:
         return 0
 
     write_result(result, config, run_id, now.isoformat(), write=write)
+    if checkpoint_path:
+        write(checkpoint_path, json.dumps({
+            "agent": "bug_hunter",
+            "run_id": run_id,
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "complete": True,
+            "status": result.status,
+            "reason": result.reason,
+            "completed_batches": len(checkpoint_rows),
+            "total_batches": result.n_batches,
+            "batches": checkpoint_rows,
+        }, indent=2) + "\n")
 
     print(f"STATUS={result.status}")
     print(f"REASON={result.reason}")

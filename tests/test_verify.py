@@ -59,7 +59,7 @@ class VerifyTests(unittest.TestCase):
     def test_refute_prompt_includes_the_full_unit(self):
         captured = {}
 
-        def fake_chat(profile, system, user):
+        def fake_chat(profile, system, user, **kwargs):
             captured["system"] = system
             captured["user"] = user
             return {"upheld": True, "reason": "ok"}, None

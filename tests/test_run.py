@@ -68,7 +68,7 @@ def _files(cfg):
     return {"mod.py": MOD, "reg.json": "{}", "ledger.ndjson": cfg.get("_ledger", "")}
 
 
-def _run_with(cfg, *, finding_line=2, verify_upheld=True):
+def _run_with(cfg, *, finding_line=2, verify_upheld=True, checkpoint=None):
     files = _files(cfg)
     run = lambda a: DIFF if "HEAD@{24 hours ago}..HEAD" in " ".join(a) else ""
     read = lambda p: files.get(p)
@@ -90,7 +90,8 @@ def _run_with(cfg, *, finding_line=2, verify_upheld=True):
 
     with mock.patch.object(model, "_http_post", side_effect=post):
         return run_bug_hunter(cfg, PROFILE, run=run, read=read,
-                              list_files=list_files, today="2026-07-28")
+                              list_files=list_files, today="2026-07-28",
+                              checkpoint=checkpoint)
 
 
 class RunTests(unittest.TestCase):
@@ -125,6 +126,12 @@ class RunTests(unittest.TestCase):
         r = _run_with(_config())
         fp = r.findings[0].fingerprint
         self.assertEqual(r.first_seen.get(fp), "2026-07-28")
+
+    def test_checkpoint_called_after_each_review_batch(self):
+        seen = []
+        _run_with(_config(), checkpoint=lambda result, done, total:
+                  seen.append((result.label, result.ok, done, total)))
+        self.assertEqual(seen, [("batch1", True, 1, 1)])
 
     def test_no_changes_is_pass(self):
         cfg = _config()

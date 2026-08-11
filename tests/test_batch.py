@@ -88,6 +88,14 @@ class PlanTests(unittest.TestCase):
         self.assertEqual([row[0] for row in plan], list(range(1, len(plan) + 1)))
         self.assertTrue(all("Review batch" in row[1] for row in plan))
 
+    def test_plan_honors_explicit_smaller_batch_cap(self):
+        p = ModelProfile(endpoint="e", context_window_tokens=100000,
+                         max_output_tokens=1000)
+        us = [_unit("a.py", f"f{i}", i * 100, 100) for i in range(8)]
+        uncapped = plan_batches(us, p, "sys")
+        capped = plan_batches(us, p, "sys", max_input_tokens=200)
+        self.assertGreater(len(capped), len(uncapped))
+
 
 if __name__ == "__main__":
     unittest.main()

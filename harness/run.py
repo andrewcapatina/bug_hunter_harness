@@ -10,6 +10,7 @@ per-bot adapter (sidecar.py); this returns the canonical result.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import time
 
 from harness.batch import plan_batches
 from harness.dedup import dedupe
@@ -43,7 +44,7 @@ class RunResult:
 
 
 def run_bug_hunter(config: dict, profile, *, run, read, list_files, today: str,
-                   run_id: str | None = None) -> RunResult:
+                   run_id: str | None = None, checkpoint=None) -> RunResult:
     g = gather(config, run=run, read=read, list_files=list_files, run_id=run_id)
 
     if not g.diff.strip():
@@ -58,9 +59,15 @@ def run_bug_hunter(config: dict, profile, *, run, read, list_files, today: str,
                          g.first_seen, 0, 0, 0, g.diff_truncated, 0)
 
     system = build_system_prompt(config, g.resolved)
-    plan = plan_batches(units, profile, system)             # [(idx, user, units)]
+    execution = config.get("execution", {}) or {}
+    max_input_tokens = execution.get("max_batch_input_tokens")
+    total_timeout_s = float(execution.get("total_timeout_s", 0) or 0)
+    deadline = time.monotonic() + total_timeout_s if total_timeout_s else None
+    plan = plan_batches(units, profile, system,
+                        max_input_tokens=max_input_tokens)  # [(idx, user, units)]
     results = chat_batch(profile, [(f"batch{idx}", system, user)
-                                   for idx, user, _ in plan])
+                                   for idx, user, _ in plan], deadline=deadline,
+                         on_result=checkpoint)
 
     def first_seen_lookup(fp):
         return g.first_seen.get(fp)
@@ -89,7 +96,8 @@ def run_bug_hunter(config: dict, profile, *, run, read, list_files, today: str,
             kept.append(f)
 
     deduped = dedupe(kept)
-    verified, refuted = verify_findings(deduped, units, profile)
+    verified, refuted = verify_findings(deduped, units, profile,
+                                        deadline=deadline)
 
     status, reason = classify_status(
         verified, n_batches=len(plan), n_batch_failures=n_fail,

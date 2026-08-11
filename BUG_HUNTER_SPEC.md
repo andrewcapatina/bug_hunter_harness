@@ -126,7 +126,7 @@ Profile fields:
 - `context_window_tokens` — **batch sizing derives from this**, not a hardcoded
   4KB. (Both current harnesses hardcode 4KB calibrated on MiniMax-M3; that
   breaks the moment the model changes.)
-- `max_output_tokens`, `request_timeout_s` (size from context + tok/s).
+- `max_output_tokens`, `request_timeout_s`, and bounded `attempts` (size from context + tok/s).
 - `sampling` — one of: `"server_default"` (send no params — crypto's default,
   correct for reasoning models with a tuned `generation_config`); or an
   explicit `{temperature, top_p, top_k, min_p}` block (options' DeepSeek
@@ -140,8 +140,11 @@ Shared, model-family-robustness behaviors the harness always applies (both
 bots learned these the hard way — keep them):
 - Guided JSON via `response_format`; robust extraction (skip past `</think>`,
   strip code fences, balanced-brace scan) for models that leak prose.
-- Per-batch isolation: one batch's failure never sinks the run; one corrective
-  retry per batch (crypto has this; port it).
+- Per-batch isolation: one batch's failure never sinks the run. Retry count is
+  profile-driven; unattended production profiles use one attempt so an entire
+  harness invocation is never repeated after an expensive timeout.
+- A shared monotonic deadline bounds review plus adversarial verification.
+  Completed batches are atomically checkpointed before the next batch starts.
 - Centralize the call (options' `chat_batch`); retire crypto's inline
   `_llm_chat`.
 
@@ -272,10 +275,15 @@ spec.
     "model": "auto",
     "context_window_tokens": 64000,
     "max_output_tokens": 16384,
-    "request_timeout_s": 1800,
+    "request_timeout_s": 240,
+    "attempts": 1,
     "sampling": "server_default",
     "response_format": "json_object",
     "reasoning_model": true
+  },
+  "execution": {
+    "total_timeout_s": 480,
+    "max_batch_input_tokens": 24000
   },
   "gather": {
     "since_hours": 24,

@@ -6,10 +6,15 @@
   "model": "auto",
   "context_window_tokens": 256000,
   "max_output_tokens": 16384,
-  "request_timeout_s": 1800,
+  "request_timeout_s": 240,
+  "attempts": 1,
   "sampling": "server_default",
   "response_format": "json_object",
   "reasoning_model": true
+ },
+ "execution": {
+  "total_timeout_s": 480,
+  "max_batch_input_tokens": 24000
  },
  "gather": {
   "since_hours": 24,
@@ -31,7 +36,8 @@
  },
  "sidecar": {
   "findings_path": "state/bug_hunter-{ts}.json",
-  "marker_path": "state/bug_hunter_last_run.txt"
+  "marker_path": "state/bug_hunter_last_run.txt",
+  "checkpoint_path": "state/bug_hunter_checkpoint.json"
  },
  "fixer": {
   "allowed_paths": [

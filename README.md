@@ -77,5 +77,7 @@ logic in the harness — it cannot drift again.
 Swapping models is editing `model_profile` in a config: `endpoint`, `model`
 (or `"auto"` discovery), `context_window_tokens` (batch sizing derives from it),
 `sampling` (`"server_default"` or an explicit block with a
-`sampling_incompatible` drop-list), `response_format`, `reasoning_model`, and an
-optional `api_key` for frontier models. No code change.
+`sampling_incompatible` drop-list), `response_format`, `reasoning_model`,
+bounded `attempts`, and an optional `api_key` for frontier models. The
+`execution` block caps total model time and per-batch input size; an optional
+sidecar checkpoint preserves every completed batch. No code change.

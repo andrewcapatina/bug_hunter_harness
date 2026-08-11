@@ -34,6 +34,7 @@ class ModelProfile:
     context_window_tokens: int = 32_000            # batch sizing derives from this
     max_output_tokens: int = 8_192
     request_timeout_s: float = 600.0
+    attempts: int = 2                              # bounded retries per request
     sampling: object = "server_default"            # "server_default" | {temperature,...}
     sampling_incompatible: list = field(default_factory=list)  # params a lane 400s on
     response_format: str = "json_object"           # json_object | json_schema | none
@@ -185,18 +186,26 @@ def _build_payload(profile, model, system, user, json_schema) -> dict:
 
 
 def chat(profile: ModelProfile, system: str, user: str, *,
-         json_schema: dict | None = None, attempts: int = 2):
+         json_schema: dict | None = None, attempts: int | None = None,
+         deadline: float | None = None):
     """One structured-JSON turn. Returns (parsed_dict, ChatStats). One
     corrective retry by default (network blip or unparseable JSON)."""
+    attempts = profile.attempts if attempts is None else attempts
     model = resolve_model(profile)
     url = profile.endpoint.rstrip("/") + "/chat/completions"
     payload = _build_payload(profile, model, system, user, json_schema)
     headers = {"Authorization": f"Bearer {profile.api_key}"} if profile.api_key else {}
     last: Exception | None = None
     for attempt in range(1, attempts + 1):
+        timeout = profile.request_timeout_s
+        if deadline is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ModelError("run time budget exhausted")
+            timeout = min(timeout, remaining)
         t0 = time.monotonic()
         try:
-            resp = _http_post(url, payload, profile.request_timeout_s, headers)
+            resp = _http_post(url, payload, timeout, headers)
             choice = resp["choices"][0]
             parsed = extract_json(choice["message"]["content"])
             usage = resp.get("usage") or {}
@@ -214,14 +223,19 @@ def chat(profile: ModelProfile, system: str, user: str, *,
 
 
 def chat_batch(profile: ModelProfile, items, *,
-               json_schema: dict | None = None) -> list[BatchResult]:
+               json_schema: dict | None = None, deadline: float | None = None,
+               on_result=None) -> list[BatchResult]:
     """Run each (label, system, user) with per-batch isolation — a failing
     batch becomes an ok=False result, never an exception that sinks the run."""
     results: list[BatchResult] = []
     for label, system, user in items:
         try:
-            data, stats = chat(profile, system, user, json_schema=json_schema)
-            results.append(BatchResult(label, True, data, stats, None))
+            data, stats = chat(profile, system, user, json_schema=json_schema,
+                               deadline=deadline)
+            result = BatchResult(label, True, data, stats, None)
         except Exception as e:  # noqa: BLE001 — isolation is the whole point
-            results.append(BatchResult(label, False, None, None, str(e)))
+            result = BatchResult(label, False, None, None, str(e))
+        results.append(result)
+        if on_result is not None:
+            on_result(result, len(results), len(items))
     return results

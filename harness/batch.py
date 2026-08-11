@@ -91,10 +91,13 @@ def render_batch(units: list[ReviewUnit], batch_idx: int, n_batches: int) -> str
     return header + "\n\n" + "\n\n".join(render_unit(u) for u in units)
 
 
-def plan_batches(units: list[ReviewUnit], profile, system_prompt: str):
+def plan_batches(units: list[ReviewUnit], profile, system_prompt: str,
+                 max_input_tokens: int | None = None):
     """Convenience: pack units to the profile budget and render each batch.
     Returns [(batch_idx, rendered_user_prompt, [units]), ...]."""
     budget = input_budget(profile, system_prompt)
+    if max_input_tokens:
+        budget = min(budget, max_input_tokens)
     packed = pack_batches(units, budget)
     n = len(packed)
     return [(i + 1, render_batch(b, i + 1, n), b) for i, b in enumerate(packed)]
