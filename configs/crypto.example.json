@@ -5,15 +5,16 @@
   "endpoint": "http://YOUR_LLM_HOST:8001/v1",
   "model": "auto",
   "context_window_tokens": 256000,
-  "max_output_tokens": 16384,
-  "request_timeout_s": 240,
+  "max_output_tokens": 4096,
+  "request_timeout_s": 300,
   "attempts": 1,
   "sampling": "server_default",
   "response_format": "json_object",
-  "reasoning_model": true
+  "reasoning_model": true,
+  "reasoning_effort": "none"
  },
  "execution": {
-  "total_timeout_s": 480,
+  "total_timeout_s": 1500,
   "max_batch_input_tokens": 24000
  },
  "gather": {

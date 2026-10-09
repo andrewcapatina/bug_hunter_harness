@@ -6,7 +6,7 @@
   "model": "deepseek-v4-flash",
   "context_window_tokens": 256000,
   "max_output_tokens": 16384,
-  "request_timeout_s": 240,
+  "request_timeout_s": 600,
   "attempts": 1,
   "sampling": {
    "temperature": 1.0,
@@ -21,8 +21,8 @@
   "reasoning_model": true
  },
  "execution": {
-  "total_timeout_s": 480,
-  "max_batch_input_tokens": 24000
+  "total_timeout_s": 1800,
+  "max_batch_input_tokens": 50000
  },
  "gather": {
   "since_hours": 24,

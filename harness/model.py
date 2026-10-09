@@ -39,6 +39,7 @@ class ModelProfile:
     sampling_incompatible: list = field(default_factory=list)  # params a lane 400s on
     response_format: str = "json_object"           # json_object | json_schema | none
     reasoning_model: bool = True                    # strips </think>, sampling policy
+    reasoning_effort: str | None = None             # none | low | medium | high
     api_key: str | None = None                      # frontier models; local vLLM = None
 
     @classmethod
@@ -182,6 +183,8 @@ def _build_payload(profile, model, system, user, json_schema) -> dict:
         for k, v in profile.sampling.items():
             if k not in profile.sampling_incompatible:
                 payload[k] = v
+    if profile.reasoning_effort is not None:
+        payload["reasoning_effort"] = profile.reasoning_effort
     return payload
 
 
@@ -207,7 +210,11 @@ def chat(profile: ModelProfile, system: str, user: str, *,
         try:
             resp = _http_post(url, payload, timeout, headers)
             choice = resp["choices"][0]
-            parsed = extract_json(choice["message"]["content"])
+            message = choice["message"]
+            # Some vLLM reasoning parsers put the final non-thinking answer
+            # in `reasoning` and return content=null. Both fields are model
+            # output; prefer the normal content field and fall back safely.
+            parsed = extract_json(message.get("content") or message.get("reasoning"))
             usage = resp.get("usage") or {}
             return parsed, ChatStats(
                 model=model,

@@ -85,6 +85,11 @@ class PayloadTests(unittest.TestCase):
         for k in ("temperature", "top_p", "top_k", "min_p"):
             self.assertNotIn(k, pl)
 
+    def test_reasoning_effort_is_profile_driven(self):
+        p = ModelProfile(endpoint="e", reasoning_effort="none")
+        pl = _build_payload(p, "m", "sys", "usr", None)
+        self.assertEqual(pl["reasoning_effort"], "none")
+
     def test_explicit_sampling_included_incompatible_dropped(self):
         p = ModelProfile(endpoint="e",
                          sampling={"temperature": 1.0, "top_p": 0.95, "min_p": 0.01},
@@ -108,6 +113,13 @@ class ChatTests(unittest.TestCase):
         self.assertEqual(stats.model, "m")
         self.assertEqual(stats.completion_tokens, 50)
         self.assertEqual(stats.attempt, 1)
+
+    def test_reasoning_field_is_used_when_content_is_null(self):
+        response = _resp(None)
+        response["choices"][0]["message"]["reasoning"] = '{"findings": []}'
+        with mock.patch.object(model, "_http_post", return_value=response):
+            data, _stats = chat(self.p, "sys", "usr")
+        self.assertEqual(data, {"findings": []})
 
     def test_retries_once_then_succeeds(self):
         calls = {"n": 0}
